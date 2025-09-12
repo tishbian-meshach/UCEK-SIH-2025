@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ArrowLeft, Users, CheckCircle, AlertCircle } from "lucide-react"
+import Footer from "@/components/Footer"
 
 import MemberRow from "@/components/MemberRow"
 import ValidationMessage from "@/components/ValidationMessage"
@@ -191,8 +192,9 @@ export default function CreateTeamPage() {
   const availableCount = students.length
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
+      <div className="flex-1">
+        <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <Link href="/" className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4">
@@ -377,7 +379,9 @@ export default function CreateTeamPage() {
             </Card>
           </div>
         </div>
+        </div>
       </div>
+      <Footer />
     </div>
   )
 }

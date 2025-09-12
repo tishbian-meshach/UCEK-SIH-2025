@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ArrowLeft, Users, Save, AlertCircle } from "lucide-react"
+import Footer from "@/components/Footer"
 import MemberRow from "@/components/MemberRow"
 import type { Student, Team } from "@/lib/types"
 
@@ -155,16 +156,19 @@ export default function EditTeamPage() {
       // Basic validation
       if (!teamName.trim()) {
         setError("Team name is required")
+        setSaving(false)
         return
       }
 
       if (!problemStatementId.trim()) {
         setError("Problem Statement ID is required")
+        setSaving(false)
         return
       }
 
       if (!leader.regNo) {
         setError("Team leader is required")
+        setSaving(false)
         return
       }
 
@@ -172,26 +176,61 @@ export default function EditTeamPage() {
       for (let i = 0; i < 3; i++) {
         if (!members[i].regNo) {
           setError(`Member ${i + 1} is required`)
+          setSaving(false)
           return
         }
       }
 
-      // TODO: Implement team update API
-      setSuccess("Team updated successfully!")
-      
-      // Update localStorage
-      const updatedTeam = {
-        ...team,
+      // Call the update team API
+      const updateData = {
         teamName,
         problemStatementId,
-        leader: { ...team!.leader, github: leader.github, projectLink: leader.projectLink },
-        members: members.filter(m => m.regNo).map((m, index) => ({
-          ...team!.members[index],
+        leader: {
+          regNo: leader.regNo,
+          github: leader.github,
+          projectLink: leader.projectLink
+        },
+        members: members.filter(m => m.regNo).map(m => ({
+          regNo: m.regNo,
           github: m.github,
           projectLink: m.projectLink
         }))
       }
-      localStorage.setItem("team", JSON.stringify(updatedTeam))
+
+      const response = await fetch(`/api/teams/${teamId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updateData)
+      })
+
+      const result = await response.json()
+
+      if (result.ok) {
+        setSuccess("Team updated successfully in Google Sheets!")
+
+        // Update localStorage with the updated team data
+        const updatedTeam = {
+          ...team,
+          teamName,
+          problemStatementId,
+          leader: { ...team!.leader, github: leader.github, projectLink: leader.projectLink },
+          members: members.filter(m => m.regNo).map((m, index) => ({
+            ...team!.members[index],
+            github: m.github,
+            projectLink: m.projectLink
+          }))
+        }
+        localStorage.setItem("team", JSON.stringify(updatedTeam))
+      } else {
+        setError(result.message || "Failed to update team")
+        setSaving(false)
+        return
+      }
+
+      // Auto-hide success message after 3 seconds
+      setTimeout(() => {
+        setSuccess("")
+      }, 3000)
 
     } catch (err) {
       setError("Failed to update team. Please try again.")
@@ -203,18 +242,22 @@ export default function EditTeamPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading team data...</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading team data...</p>
+          </div>
         </div>
+        <Footer />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
+      <div className="flex-1">
+        <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center mb-8">
           <Button
@@ -259,6 +302,22 @@ export default function EditTeamPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSave} className="space-y-6">
+              {/* Error Message */}
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              {/* Success Message */}
+              {success && (
+                <Alert className="border-green-200 bg-green-50">
+                  <AlertCircle className="h-4 w-4 text-green-600" />
+                  <AlertDescription className="text-green-800">{success}</AlertDescription>
+                </Alert>
+              )}
+
               {/* Team Name */}
               <div>
                 <label htmlFor="teamName" className="block text-sm font-medium text-gray-700 mb-2">
@@ -343,14 +402,25 @@ export default function EditTeamPage() {
                   disabled={saving}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
-                  <Save className="mr-2 h-4 w-4" />
-                  {saving ? "Saving..." : "Save Changes"}
+                  {saving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Save Changes
+                    </>
+                  )}
                 </Button>
               </div>
             </form>
           </CardContent>
         </Card>
+        </div>
       </div>
+      <Footer />
     </div>
   )
 }

@@ -324,3 +324,80 @@ export async function getTeamByMemberRegNo(regNo: string): Promise<Team | null> 
     return null
   }
 }
+
+export async function updateTeam(teamId: string, teamData: {
+  teamName: string
+  problemStatementId: string
+  leader: {
+    regNo: string
+    github: string
+    projectLink: string
+  }
+  members: Array<{
+    regNo: string
+    github: string
+    projectLink: string
+  }>
+}): Promise<any> {
+  try {
+    const doc = await getSpreadsheet()
+    const teamsSheet = doc.sheetsByTitle["Teams"]
+
+    if (!teamsSheet) {
+      console.error("Teams sheet not found")
+      return null
+    }
+
+    const rows = await teamsSheet.getRows()
+
+    // Find the team row by Team ID
+    for (const row of rows) {
+      if (row.get("Team ID") === teamId) {
+        // Update team basic info
+        row.set("Team Name", teamData.teamName)
+        row.set("Problem Statement ID", teamData.problemStatementId)
+
+        // Update leader info
+        row.set("Team Leader github", teamData.leader.github || "")
+        row.set("Team Leader project", teamData.leader.projectLink || "")
+
+        // Update members info (up to 5 members)
+        for (let i = 0; i < 5; i++) {
+          const member = teamData.members[i]
+          const memberIndex = i + 1
+
+          if (member) {
+            row.set(`Member-${memberIndex} github`, member.github || "")
+            row.set(`Member-${memberIndex} project`, member.projectLink || "")
+          }
+        }
+
+        await row.save()
+
+        // Return updated team data
+        return {
+          teamId: row.get("Team ID"),
+          teamName: row.get("Team Name"),
+          problemStatementId: row.get("Problem Statement ID"),
+          leader: {
+            regNo: row.get("Team Leader Reg NO"),
+            name: row.get("Team Leader Name"),
+            github: row.get("Team Leader github"),
+            projectLink: row.get("Team Leader project")
+          },
+          members: teamData.members.map((member, index) => ({
+            regNo: member.regNo,
+            name: row.get(`Member-${index + 1} Name`),
+            github: member.github,
+            projectLink: member.projectLink
+          }))
+        }
+      }
+    }
+
+    return null // Team not found
+  } catch (error) {
+    console.error("Error updating team:", error)
+    return null
+  }
+}

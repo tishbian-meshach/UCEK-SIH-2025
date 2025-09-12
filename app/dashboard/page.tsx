@@ -18,6 +18,7 @@ import {
   AlertCircle,
   CheckCircle
 } from "lucide-react"
+import Footer from "@/components/Footer"
 import type { Student, Team } from "@/lib/types"
 
 export default function DashboardPage() {
@@ -77,7 +78,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -93,6 +94,8 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      <div className="flex-1">
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Student Info Card */}
@@ -278,7 +281,9 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         )}
+        </div>
       </div>
+      <Footer />
     </div>
   )
 }
