@@ -161,7 +161,9 @@ export async function createTeam(teamData: CreateTeamRequest): Promise<{ teamId:
   const teamRowData: any = {
     "Team ID": teamId,
     "Team Name": teamData.teamName,
-    "Problem Statement ID": teamData.problemStatementId,
+    "Problem Statement ID 1": teamData.problemStatementId1,
+    "Problem Statement ID 2": teamData.problemStatementId2 || "",
+    "Dept Needed": teamData.deptNeeded || "",
   }
 
   // Add leader data
@@ -291,7 +293,10 @@ export async function getTeamByMemberRegNo(regNo: string): Promise<Team | null> 
     const team: Team = {
       teamId: teamRow.get("Team ID") || "",
       teamName: teamRow.get("Team Name") || "",
-      problemStatementId: teamRow.get("Problem Statement ID") || "",
+      problemStatementId: teamRow.get("Problem Statement ID") || teamRow.get("Problem Statement ID 1") || "",
+      problemStatementId1: teamRow.get("Problem Statement ID 1") || teamRow.get("Problem Statement ID") || "",
+      problemStatementId2: teamRow.get("Problem Statement ID 2") || "",
+      deptNeeded: teamRow.get("Dept Needed") || "",
       leader: {
         ...leaderStudent,
         github: teamRow.get("Team Leader github") || "",
@@ -325,9 +330,72 @@ export async function getTeamByMemberRegNo(regNo: string): Promise<Team | null> 
   }
 }
 
+export async function getTeamById(teamId: string): Promise<Team | null> {
+  try {
+    const doc = await getSpreadsheet()
+    const teamsSheet = doc.sheetsByTitle["Teams"]
+
+    if (!teamsSheet) {
+      throw new Error("Teams sheet not found")
+    }
+
+    const rows = await teamsSheet.getRows()
+
+    // Find team by Team ID
+    const teamRow = rows.find(row => row.get("Team ID") === teamId)
+
+    if (!teamRow) return null
+
+    // Get leader details from students sheet
+    const leaderStudent = await getStudentByRegNo(teamRow.get("Team Leader Reg NO"))
+    if (!leaderStudent) return null
+
+    // Build team object
+    const team: Team = {
+      teamId: teamRow.get("Team ID") || "",
+      teamName: teamRow.get("Team Name") || "",
+      problemStatementId: teamRow.get("Problem Statement ID") || teamRow.get("Problem Statement ID 1") || "",
+      problemStatementId1: teamRow.get("Problem Statement ID 1") || teamRow.get("Problem Statement ID") || "",
+      problemStatementId2: teamRow.get("Problem Statement ID 2") || "",
+      deptNeeded: teamRow.get("Dept Needed") || "",
+      leader: {
+        ...leaderStudent,
+        github: teamRow.get("Team Leader github") || "",
+        projectLink: teamRow.get("Team Leader project") || "",
+      },
+      members: [],
+      createdAt: "",
+      status: "Active"
+    }
+
+    // Add members
+    for (let i = 1; i <= 5; i++) {
+      const memberRegNo = teamRow.get(`Member-${i} Reg NO`)
+
+      if (memberRegNo) {
+        const memberStudent = await getStudentByRegNo(memberRegNo)
+        if (memberStudent) {
+          team.members.push({
+            ...memberStudent,
+            github: teamRow.get(`Member-${i} github`) || "",
+            projectLink: teamRow.get(`Member-${i} project`) || "",
+          })
+        }
+      }
+    }
+
+    return team
+  } catch (error) {
+    console.error("Error getting team by ID:", error)
+    return null
+  }
+}
+
 export async function updateTeam(teamId: string, teamData: {
   teamName: string
-  problemStatementId: string
+  problemStatementId1: string
+  problemStatementId2?: string
+  deptNeeded?: string
   leader: {
     regNo: string
     github: string
@@ -355,7 +423,9 @@ export async function updateTeam(teamId: string, teamData: {
       if (row.get("Team ID") === teamId) {
         // Update team basic info
         row.set("Team Name", teamData.teamName)
-        row.set("Problem Statement ID", teamData.problemStatementId)
+        row.set("Problem Statement ID 1", teamData.problemStatementId1)
+        row.set("Problem Statement ID 2", teamData.problemStatementId2 || "")
+        row.set("Dept Needed", teamData.deptNeeded || "")
 
         // Update leader info
         row.set("Team Leader github", teamData.leader.github || "")

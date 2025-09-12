@@ -25,6 +25,9 @@ export interface Team {
   teamId: string
   teamName: string
   problemStatementId: string
+  problemStatementId1?: string
+  problemStatementId2?: string
+  deptNeeded?: string
   leader: TeamMember
   members: TeamMember[]
   createdAt: string
@@ -33,9 +36,11 @@ export interface Team {
 
 export interface CreateTeamRequest {
   teamName: string
-  problemStatementId: string
+  problemStatementId1: string
+  problemStatementId2?: string
   leader: Member
   members: Member[]
+  deptNeeded?: string
   createdBy?: string
 }
 

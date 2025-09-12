@@ -32,7 +32,10 @@ export default function EditTeamPage() {
   
   // Form data
   const [teamName, setTeamName] = useState("")
-  const [problemStatementId, setProblemStatementId] = useState("")
+  const [problemStatementId1, setProblemStatementId1] = useState("")
+  const [problemStatementId2, setProblemStatementId2] = useState("")
+  const [needOtherDept, setNeedOtherDept] = useState(false)
+  const [deptNeeded, setDeptNeeded] = useState<string[]>([])
   const [leader, setLeader] = useState<MemberData>({ regNo: "", github: "", projectLink: "" })
   const [members, setMembers] = useState<MemberData[]>([
     { regNo: "", github: "", projectLink: "" },
@@ -62,38 +65,70 @@ export default function EditTeamPage() {
     }
 
     setStudent(parsedStudent)
-    setTeam(parsedTeam)
 
-    console.log("Parsed team data:", parsedTeam)
-
-    // Load students first (passing team data), then populate form data
-    loadStudents(parsedTeam).then(() => {
-      // Populate form with existing team data after students are loaded
-      setTeamName(parsedTeam.teamName)
-      setProblemStatementId(parsedTeam.problemStatementId)
-
-      const leaderData = {
-        regNo: parsedTeam.leader.regNo,
-        github: parsedTeam.leader.github || "",
-        projectLink: parsedTeam.leader.projectLink || ""
-      }
-      console.log("Setting leader data:", leaderData)
-      setLeader(leaderData)
-
-      // Populate members
-      const newMembers = [...members]
-      parsedTeam.members.forEach((member: any, index: number) => {
-        if (index < 5) {
-          newMembers[index] = {
-            regNo: member.regNo,
-            github: member.github || "",
-            projectLink: member.projectLink || ""
-          }
+    // Fetch fresh team data from Google Sheets instead of using localStorage
+    const loadFreshTeamData = async () => {
+      try {
+        const response = await fetch(`/api/teams/${teamId}/get`)
+        if (!response.ok) {
+          throw new Error("Failed to fetch team data")
         }
-      })
-      console.log("Setting members data:", newMembers)
-      setMembers(newMembers)
-    })
+
+        const result = await response.json()
+        if (!result.ok) {
+          throw new Error(result.message)
+        }
+
+        const freshTeamData = result.team
+        console.log("Fresh team data from Google Sheets:", freshTeamData)
+
+        setTeam(freshTeamData)
+
+        // Load students first, then populate form data
+        await loadStudents(freshTeamData)
+
+        // Populate form with fresh team data from Google Sheets
+        setTeamName(freshTeamData.teamName)
+        setProblemStatementId1(freshTeamData.problemStatementId1 || freshTeamData.problemStatementId || "")
+        setProblemStatementId2(freshTeamData.problemStatementId2 || "")
+
+        // Handle department data - could be comma-separated string or array
+        const deptData = freshTeamData.deptNeeded || ""
+        const deptArray = deptData ? deptData.split(", ").filter((d: string) => d.trim()) : []
+        setDeptNeeded(deptArray)
+        setNeedOtherDept(deptArray.length > 0)
+
+        const leaderData = {
+          regNo: freshTeamData.leader.regNo,
+          github: freshTeamData.leader.github || "",
+          projectLink: freshTeamData.leader.projectLink || ""
+        }
+        console.log("Setting leader data:", leaderData)
+        setLeader(leaderData)
+
+        // Populate members
+        const newMembers = [...members]
+        freshTeamData.members.forEach((member: any, index: number) => {
+          if (index < 5) {
+            newMembers[index] = {
+              regNo: member.regNo,
+              github: member.github || "",
+              projectLink: member.projectLink || ""
+            }
+          }
+        })
+        console.log("Setting members data:", newMembers)
+        setMembers(newMembers)
+
+        setLoading(false)
+      } catch (error) {
+        console.error("Error loading fresh team data:", error)
+        setError("Failed to load team data from server")
+        setLoading(false)
+      }
+    }
+
+    loadFreshTeamData()
   }, [teamId, router])
 
   const loadStudents = async (teamData?: Team) => {
@@ -160,8 +195,8 @@ export default function EditTeamPage() {
         return
       }
 
-      if (!problemStatementId.trim()) {
-        setError("Problem Statement ID is required")
+      if (!problemStatementId1.trim()) {
+        setError("Problem Statement ID 1 is required")
         setSaving(false)
         return
       }
@@ -184,7 +219,9 @@ export default function EditTeamPage() {
       // Call the update team API
       const updateData = {
         teamName,
-        problemStatementId,
+        problemStatementId1,
+        problemStatementId2,
+        deptNeeded: needOtherDept ? deptNeeded.join(", ") : "",
         leader: {
           regNo: leader.regNo,
           github: leader.github,
@@ -212,7 +249,9 @@ export default function EditTeamPage() {
         const updatedTeam = {
           ...team,
           teamName,
-          problemStatementId,
+          problemStatementId1,
+          problemStatementId2,
+          deptNeeded: needOtherDept ? deptNeeded.join(", ") : "",
           leader: { ...team!.leader, github: leader.github, projectLink: leader.projectLink },
           members: members.filter(m => m.regNo).map((m, index) => ({
             ...team!.members[index],
@@ -334,11 +373,11 @@ export default function EditTeamPage() {
                 />
               </div>
 
-              {/* Problem Statement ID */}
+              {/* Problem Statement ID 1 */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label htmlFor="problemStatementId" className="block text-sm font-medium text-gray-700">
-                    Problem Statement ID <span className="text-red-500">*</span>
+                  <label htmlFor="problemStatementId1" className="block text-sm font-medium text-gray-700">
+                    Problem Statement ID 1 <span className="text-red-500">*</span>
                   </label>
                   <a
                     href="https://tishbian-meshach.github.io/SIH_PS_2025/"
@@ -351,13 +390,97 @@ export default function EditTeamPage() {
                 </div>
                 <input
                   type="text"
-                  id="problemStatementId"
-                  value={problemStatementId}
-                  onChange={(e) => setProblemStatementId(e.target.value)}
+                  id="problemStatementId1"
+                  value={problemStatementId1}
+                  onChange={(e) => setProblemStatementId1(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter problem statement ID..."
+                  placeholder="Enter problem statement ID 1..."
                   required
                 />
+              </div>
+
+              {/* Problem Statement ID 2 (Optional) */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label htmlFor="problemStatementId2" className="block text-sm font-medium text-gray-700">
+                    Problem Statement ID 2 <span className="text-gray-500">(Optional)</span>
+                  </label>
+                  <a
+                    href="https://tishbian-meshach.github.io/SIH_PS_2025/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:text-blue-800 underline"
+                  >
+                    Choose from here
+                  </a>
+                </div>
+                <input
+                  type="text"
+                  id="problemStatementId2"
+                  value={problemStatementId2}
+                  onChange={(e) => setProblemStatementId2(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter problem statement ID 2 (optional)..."
+                />
+              </div>
+
+              {/* Department Needed - Highlighted */}
+              <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-4">
+                <div className="mb-4">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={needOtherDept}
+                      onChange={(e) => {
+                        setNeedOtherDept(e.target.checked)
+                        if (!e.target.checked) {
+                          setDeptNeeded([])
+                        }
+                      }}
+                      className="mr-3 h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span className="text-lg font-semibold text-gray-800">
+                      🤝 Need other department members?
+                    </span>
+                  </label>
+                  <p className="text-sm text-gray-600 mt-2 ml-8">
+                    Check this if your team needs members from different departments for diverse skills
+                  </p>
+                </div>
+
+                {needOtherDept && (
+                  <div className="ml-8">
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Select Departments Needed (Multiple allowed)
+                    </label>
+                    <div className="space-y-2">
+                      {["CSE", "ECE", "EEE", "MECH", "Cyber Security"].map((dept) => (
+                        <label key={dept} className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={deptNeeded.includes(dept)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setDeptNeeded([...deptNeeded, dept])
+                              } else {
+                                setDeptNeeded(deptNeeded.filter(d => d !== dept))
+                              }
+                            }}
+                            className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          />
+                          <span className="text-sm font-medium text-gray-700">{dept}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {deptNeeded.length > 0 && (
+                      <div className="mt-3 p-2 bg-blue-50 rounded-md">
+                        <p className="text-sm text-blue-800">
+                          <strong>Selected:</strong> {deptNeeded.join(", ")}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Team Leader */}

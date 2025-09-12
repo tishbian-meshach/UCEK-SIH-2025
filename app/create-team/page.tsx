@@ -30,7 +30,10 @@ export default function CreateTeamPage() {
 
   // Team form data
   const [teamName, setTeamName] = useState("")
-  const [problemStatementId, setProblemStatementId] = useState("")
+  const [problemStatementId1, setProblemStatementId1] = useState("")
+  const [problemStatementId2, setProblemStatementId2] = useState("")
+  const [needOtherDept, setNeedOtherDept] = useState(false)
+  const [deptNeeded, setDeptNeeded] = useState<string[]>([])
   const [leader, setLeader] = useState<MemberData>({ regNo: "", github: "", projectLink: "" })
   const [members, setMembers] = useState<MemberData[]>([
     { regNo: "", github: "", projectLink: "" }, // Member 1 - mandatory
@@ -98,9 +101,9 @@ export default function CreateTeamPage() {
       return false
     }
 
-    // Validate problem statement ID
-    if (!problemStatementId.trim()) {
-      setError("Problem Statement ID is required")
+    // Validate problem statement ID 1
+    if (!problemStatementId1.trim()) {
+      setError("Problem Statement ID 1 is required")
       return false
     }
 
@@ -147,7 +150,9 @@ export default function CreateTeamPage() {
         teamName,
         leader,
         members: members.filter(m => m.regNo),
-        problemStatementId
+        problemStatementId1,
+        problemStatementId2,
+        deptNeeded: needOtherDept ? deptNeeded.join(", ") : ""
       }
 
       const response = await fetch("/api/teams", {
@@ -162,7 +167,10 @@ export default function CreateTeamPage() {
         setSuccess(`Team "${teamName}" created successfully! Team ID: ${result.teamId}`)
         // Reset form
         setTeamName("")
-        setProblemStatementId("")
+        setProblemStatementId1("")
+        setProblemStatementId2("")
+        setNeedOtherDept(false)
+        setDeptNeeded([])
         setLeader({ regNo: "", github: "", projectLink: "" })
         setMembers([
           { regNo: "", github: "", projectLink: "" },
@@ -299,11 +307,11 @@ export default function CreateTeamPage() {
                       />
                     </div>
 
-                    {/* Problem Statement ID */}
+                    {/* Problem Statement ID 1 */}
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <label htmlFor="problemStatementId" className="block text-sm font-medium text-gray-700">
-                          Problem Statement ID <span className="text-red-500">*</span>
+                        <label htmlFor="problemStatementId1" className="block text-sm font-medium text-gray-700">
+                          Problem Statement ID 1 <span className="text-red-500">*</span>
                         </label>
                         <a
                           href="https://tishbian-meshach.github.io/SIH_PS_2025/"
@@ -316,13 +324,97 @@ export default function CreateTeamPage() {
                       </div>
                       <input
                         type="text"
-                        id="problemStatementId"
-                        value={problemStatementId}
-                        onChange={(e) => setProblemStatementId(e.target.value)}
+                        id="problemStatementId1"
+                        value={problemStatementId1}
+                        onChange={(e) => setProblemStatementId1(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter problem statement ID..."
+                        placeholder="Enter problem statement ID 1..."
                         required
                       />
+                    </div>
+
+                    {/* Problem Statement ID 2 (Optional) */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label htmlFor="problemStatementId2" className="block text-sm font-medium text-gray-700">
+                          Problem Statement ID 2 <span className="text-gray-500">(Optional)</span>
+                        </label>
+                        <a
+                          href="https://tishbian-meshach.github.io/SIH_PS_2025/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:text-blue-800 underline"
+                        >
+                          Choose from here
+                        </a>
+                      </div>
+                      <input
+                        type="text"
+                        id="problemStatementId2"
+                        value={problemStatementId2}
+                        onChange={(e) => setProblemStatementId2(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter problem statement ID 2 (optional)..."
+                      />
+                    </div>
+
+                    {/* Department Needed - Highlighted */}
+                    <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-4">
+                      <div className="mb-4">
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={needOtherDept}
+                            onChange={(e) => {
+                              setNeedOtherDept(e.target.checked)
+                              if (!e.target.checked) {
+                                setDeptNeeded([])
+                              }
+                            }}
+                            className="mr-3 h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          />
+                          <span className="text-lg font-semibold text-gray-800">
+                            🤝 Need other department members?
+                          </span>
+                        </label>
+                        <p className="text-sm text-gray-600 mt-2 ml-8">
+                          Check this if your team needs members from different departments for diverse skills
+                        </p>
+                      </div>
+
+                      {needOtherDept && (
+                        <div className="ml-8">
+                          <label className="block text-sm font-medium text-gray-700 mb-3">
+                            Select Departments Needed (Multiple allowed)
+                          </label>
+                          <div className="space-y-2">
+                            {["CSE", "ECE", "EEE", "MECH", "Cyber Security"].map((dept) => (
+                              <label key={dept} className="flex items-center">
+                                <input
+                                  type="checkbox"
+                                  checked={deptNeeded.includes(dept)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setDeptNeeded([...deptNeeded, dept])
+                                    } else {
+                                      setDeptNeeded(deptNeeded.filter(d => d !== dept))
+                                    }
+                                  }}
+                                  className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                />
+                                <span className="text-sm font-medium text-gray-700">{dept}</span>
+                              </label>
+                            ))}
+                          </div>
+                          {deptNeeded.length > 0 && (
+                            <div className="mt-3 p-2 bg-blue-50 rounded-md">
+                              <p className="text-sm text-blue-800">
+                                <strong>Selected:</strong> {deptNeeded.join(", ")}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Team Leader */}

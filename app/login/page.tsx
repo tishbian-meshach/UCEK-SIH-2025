@@ -13,7 +13,7 @@ import Footer from "@/components/Footer"
 export default function LoginPage() {
   const router = useRouter()
   const [regNo, setRegNo] = useState("")
-  const [password, setPassword] = useState("")
+  const [pin, setPin] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
@@ -23,7 +23,7 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const loginData: LoginRequest = { regNo, password }
+      const loginData: LoginRequest = { regNo, password: pin }
       
       const response = await fetch("/api/auth/login", {
         method: "POST",
@@ -63,7 +63,7 @@ export default function LoginPage() {
               </div>
               <CardTitle className="text-2xl font-bold">Student Login</CardTitle>
               <CardDescription>
-                Sign in with your registration number and password
+                Sign in with your registration number and PIN
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -94,19 +94,25 @@ export default function LoginPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                    Password
+                  <label htmlFor="pin" className="block text-sm font-medium text-gray-700 mb-2">
+                    PIN
                   </label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <input
-                      type="password"
-                      id="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      type="text"
+                      id="pin"
+                      value={pin}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '') // Only allow digits
+                        setPin(value)
+                      }}
                       className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Enter your password"
+                      placeholder="Enter your PIN"
                       required
+                      maxLength={8}
+                      pattern="[0-9]*"
+                      inputMode="numeric"
                     />
                   </div>
                 </div>

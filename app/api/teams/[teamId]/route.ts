@@ -3,7 +3,9 @@ import { updateTeam } from "@/lib/sheets"
 
 interface UpdateTeamRequest {
   teamName: string
-  problemStatementId: string
+  problemStatementId1: string
+  problemStatementId2?: string
+  deptNeeded?: string
   leader: {
     regNo: string
     github: string
@@ -29,13 +31,13 @@ export async function PUT(
   try {
     const teamId = params.teamId
     const body: UpdateTeamRequest = await request.json()
-    const { teamName, problemStatementId, leader, members } = body
+    const { teamName, problemStatementId1, problemStatementId2, deptNeeded, leader, members } = body
 
     // Validation
-    if (!teamName || !problemStatementId || !leader.regNo) {
+    if (!teamName || !problemStatementId1 || !leader.regNo) {
       return NextResponse.json<UpdateTeamResponse>({
         ok: false,
-        message: "Team name, problem statement ID, and team leader are required"
+        message: "Team name, problem statement ID 1, and team leader are required"
       }, { status: 400 })
     }
 
@@ -51,7 +53,9 @@ export async function PUT(
     // Update team in Google Sheets
     const updatedTeam = await updateTeam(teamId, {
       teamName,
-      problemStatementId,
+      problemStatementId1,
+      problemStatementId2,
+      deptNeeded,
       leader,
       members: validMembers
     })

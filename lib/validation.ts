@@ -9,9 +9,11 @@ export const MemberSchema = z.object({
 
 export const CreateTeamSchema = z.object({
   teamName: z.string().min(1, "Team name is required").max(100, "Team name too long"),
-  problemStatementId: z.string().min(1, "Problem Statement ID is required"),
+  problemStatementId1: z.string().min(1, "Problem Statement ID 1 is required"),
+  problemStatementId2: z.string().optional(),
   leader: MemberSchema,
   members: z.array(MemberSchema).max(MAX_MEMBERS - 1, `Maximum ${MAX_MEMBERS - 1} additional members allowed`),
+  deptNeeded: z.string().optional(),
   createdBy: z.string().optional(),
 })
 

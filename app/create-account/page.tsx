@@ -26,8 +26,8 @@ export default function CreateAccountPage() {
   const router = useRouter()
   const [regNo, setRegNo] = useState("")
   const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
+  const [pin, setPin] = useState("")
+  const [confirmPin, setConfirmPin] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
@@ -57,26 +57,32 @@ export default function CreateAccountPage() {
       return
     }
 
-    if (!password.trim()) {
-      setError("Password is required")
+    if (!pin.trim()) {
+      setError("PIN is required")
       setLoading(false)
       return
     }
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters long")
+    if (pin.length < 4) {
+      setError("PIN must be at least 4 digits long")
       setLoading(false)
       return
     }
 
-    if (password !== confirmPassword) {
-      setError("Passwords do not match")
+    if (!/^\d+$/.test(pin)) {
+      setError("PIN must contain only numbers")
+      setLoading(false)
+      return
+    }
+
+    if (pin !== confirmPin) {
+      setError("PINs do not match")
       setLoading(false)
       return
     }
 
     try {
-      const accountData: CreateAccountRequest = { regNo, email, password, confirmPassword }
+      const accountData: CreateAccountRequest = { regNo, email, password: pin, confirmPassword: confirmPin }
 
       const response = await fetch("/api/auth/create-account", {
         method: "POST",
@@ -91,8 +97,8 @@ export default function CreateAccountPage() {
         // Clear form
         setRegNo("")
         setEmail("")
-        setPassword("")
-        setConfirmPassword("")
+        setPin("")
+        setConfirmPin("")
         
         // Redirect to login after 2 seconds
         setTimeout(() => {
@@ -120,7 +126,7 @@ export default function CreateAccountPage() {
               </div>
               <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
               <CardDescription>
-                Set up your password to access the team formation system
+                Set up your PIN to access the team formation system
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -176,39 +182,51 @@ export default function CreateAccountPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                    Create Password
+                  <label htmlFor="pin" className="block text-sm font-medium text-gray-700 mb-2">
+                    Create PIN
                   </label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <input
-                      type="password"
-                      id="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      type="text"
+                      id="pin"
+                      value={pin}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '') // Only allow digits
+                        setPin(value)
+                      }}
                       className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Create a password (min 6 characters)"
+                      placeholder="Create a PIN (min 4 digits)"
                       required
-                      minLength={6}
+                      minLength={4}
+                      maxLength={8}
+                      pattern="[0-9]*"
+                      inputMode="numeric"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                    Confirm Password
+                  <label htmlFor="confirmPin" className="block text-sm font-medium text-gray-700 mb-2">
+                    Confirm PIN
                   </label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <input
-                      type="password"
-                      id="confirmPassword"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      type="text"
+                      id="confirmPin"
+                      value={confirmPin}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '') // Only allow digits
+                        setConfirmPin(value)
+                      }}
                       className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Confirm your password"
+                      placeholder="Confirm your PIN"
                       required
-                      minLength={6}
+                      minLength={4}
+                      maxLength={8}
+                      pattern="[0-9]*"
+                      inputMode="numeric"
                     />
                   </div>
                 </div>
