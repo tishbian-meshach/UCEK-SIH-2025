@@ -8,6 +8,7 @@ export interface Student {
   assignedTeamId: string
   password: string
   createdAt?: string
+  isCurrentTeamMember?: boolean
 }
 
 export interface Member {

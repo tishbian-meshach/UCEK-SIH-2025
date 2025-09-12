@@ -18,6 +18,7 @@ interface MemberRowProps {
   excludeRegNos?: string[]
   isRequired?: boolean
   isOptional?: boolean
+  currentTeamRegNos?: string[]
 }
 
 export default function MemberRow({
@@ -28,6 +29,7 @@ export default function MemberRow({
   excludeRegNos = [],
   isRequired = false,
   isOptional = false,
+  currentTeamRegNos = [],
 }: MemberRowProps) {
   const selectedStudent = students.find((s) => s.regNo === memberData.regNo)
   const [githubError, setGithubError] = useState("")
@@ -75,6 +77,7 @@ export default function MemberRow({
           excludeRegNos={excludeRegNos}
           placeholder={`Select ${label.toLowerCase()}...`}
           isRequired={isRequired}
+          currentTeamRegNos={currentTeamRegNos}
         />
       </div>
 

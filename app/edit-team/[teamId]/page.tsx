@@ -181,6 +181,12 @@ export default function EditTeamPage() {
     return excluded
   }
 
+  const getCurrentTeamRegNos = () => {
+    if (!team) return []
+    const currentTeamRegNos = [team.leader.regNo, ...team.members.map(m => m.regNo)].filter(regNo => regNo)
+    return currentTeamRegNos
+  }
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
@@ -493,6 +499,7 @@ export default function EditTeamPage() {
                   onMemberChange={setLeader}
                   excludeRegNos={getExcludedRegNos().filter(regNo => regNo !== leader.regNo)}
                   isRequired={true}
+                  currentTeamRegNos={getCurrentTeamRegNos()}
                 />
               </div>
 
@@ -516,6 +523,7 @@ export default function EditTeamPage() {
                       excludeRegNos={getExcludedRegNos().filter(regNo => regNo !== member.regNo)}
                       isRequired={index < 3}
                       isOptional={index >= 3}
+                      currentTeamRegNos={getCurrentTeamRegNos()}
                     />
                   </div>
                 ))}

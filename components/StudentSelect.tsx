@@ -16,6 +16,7 @@ interface StudentSelectProps {
   excludeRegNos?: string[]
   placeholder?: string
   isRequired?: boolean
+  currentTeamRegNos?: string[]
 }
 
 export default function StudentSelect({
@@ -25,16 +26,21 @@ export default function StudentSelect({
   excludeRegNos = [],
   placeholder = "Select a student...",
   isRequired = false,
+  currentTeamRegNos = [],
 }: StudentSelectProps) {
   const options: StudentOption[] = students.map((student) => {
     const isExcluded = excludeRegNos.includes(student.regNo)
+    const isCurrentTeamMember = currentTeamRegNos.includes(student.regNo)
     const isAssigned = student.status === "Assigned"
-    const isDisabled = isExcluded || isAssigned
+    const isDisabled = isExcluded || (isAssigned && !isCurrentTeamMember)
 
     return {
       value: student.regNo,
       label: `${student.fullName} — ${student.regNo} — ${student.dept} Year ${student.year}`,
-      student,
+      student: {
+        ...student,
+        isCurrentTeamMember
+      },
       isDisabled,
     }
   })
@@ -50,7 +56,12 @@ export default function StudentSelect({
         <span className="text-xs text-gray-500">
           {option.student.dept} Year {option.student.year}
         </span>
-        {option.student.status === "Assigned" && (
+        {option.student.status === "Assigned" && option.student.isCurrentTeamMember && (
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            Your Team
+          </span>
+        )}
+        {option.student.status === "Assigned" && !option.student.isCurrentTeamMember && (
           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
             Not Available
           </span>
