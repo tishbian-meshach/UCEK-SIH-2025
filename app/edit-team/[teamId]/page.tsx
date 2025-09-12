@@ -336,9 +336,19 @@ export default function EditTeamPage() {
 
               {/* Problem Statement ID */}
               <div>
-                <label htmlFor="problemStatementId" className="block text-sm font-medium text-gray-700 mb-2">
-                  Problem Statement ID <span className="text-red-500">*</span>
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label htmlFor="problemStatementId" className="block text-sm font-medium text-gray-700">
+                    Problem Statement ID <span className="text-red-500">*</span>
+                  </label>
+                  <a
+                    href="https://tishbian-meshach.github.io/SIH_PS_2025/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:text-blue-800 underline"
+                  >
+                    Choose from here
+                  </a>
+                </div>
                 <input
                   type="text"
                   id="problemStatementId"

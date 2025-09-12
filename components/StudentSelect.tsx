@@ -50,9 +50,15 @@ export default function StudentSelect({
         <span className="text-xs text-gray-500">
           {option.student.dept} Year {option.student.year}
         </span>
-        {option.student.status === "Assigned" && <span className="student-badge assigned">Assigned</span>}
+        {option.student.status === "Assigned" && (
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+            Not Available
+          </span>
+        )}
         {option.student.status === "Available" && !option.isDisabled && (
-          <span className="student-badge available">Available</span>
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Available
+          </span>
         )}
       </div>
     </div>

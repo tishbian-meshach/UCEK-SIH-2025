@@ -67,9 +67,9 @@ export default function CreateTeamPage() {
       if (!response.ok) throw new Error("Failed to load students")
 
       const data = await response.json()
-      // Only show available students
-      const availableStudents = (data.students || []).filter((student: Student) => student.status === "Available")
-      setStudents(availableStudents)
+      // Show all students (both available and assigned)
+      const allStudents = data.students || []
+      setStudents(allStudents)
     } catch (err) {
       setError("Failed to load students. Please try again.")
       console.error("Error loading students:", err)
@@ -189,7 +189,8 @@ export default function CreateTeamPage() {
   }
 
   const totalMembers = 1 + members.filter(m => m.regNo).length
-  const availableCount = students.length
+  const availableCount = students.filter(s => s.status === "Available").length
+  const totalStudents = students.length
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
@@ -244,6 +245,7 @@ export default function CreateTeamPage() {
                 <div className="text-center">
                   <div className="text-2xl font-bold text-green-600">{availableCount}</div>
                   <div className="text-gray-600">Available Students</div>
+                  <div className="text-xs text-gray-500 mt-1">({totalStudents} total)</div>
                 </div>
                 <div className="text-center">
                   <div className={`text-2xl font-bold ${
@@ -299,9 +301,19 @@ export default function CreateTeamPage() {
 
                     {/* Problem Statement ID */}
                     <div>
-                      <label htmlFor="problemStatementId" className="block text-sm font-medium text-gray-700 mb-2">
-                        Problem Statement ID <span className="text-red-500">*</span>
-                      </label>
+                      <div className="flex items-center justify-between mb-2">
+                        <label htmlFor="problemStatementId" className="block text-sm font-medium text-gray-700">
+                          Problem Statement ID <span className="text-red-500">*</span>
+                        </label>
+                        <a
+                          href="https://tishbian-meshach.github.io/SIH_PS_2025/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:text-blue-800 underline"
+                        >
+                          Choose from here
+                        </a>
+                      </div>
                       <input
                         type="text"
                         id="problemStatementId"
