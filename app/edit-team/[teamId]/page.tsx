@@ -69,7 +69,7 @@ export default function EditTeamPage() {
     // Fetch fresh team data from Google Sheets instead of using localStorage
     const loadFreshTeamData = async () => {
       try {
-        const response = await fetch(`/api/teams/${teamId}/get`)
+        const response = await fetch(`/api/teams?regNo=${parsedStudent.regNo}`)
         if (!response.ok) {
           throw new Error("Failed to fetch team data")
         }

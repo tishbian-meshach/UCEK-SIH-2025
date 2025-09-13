@@ -6,20 +6,23 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { 
-  Users, 
-  Crown, 
-  User, 
-  Plus, 
-  Edit, 
-  LogOut, 
-  Github, 
+import {
+  Users,
+  Crown,
+  User,
+  Plus,
+  Edit,
+  LogOut,
+  Github,
   ExternalLink,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  UserPlus,
+  Bell,
+  X
 } from "lucide-react"
 import Footer from "@/components/Footer"
-import type { Student, Team } from "@/lib/types"
+import type { Student, Team, JoinRequest } from "@/lib/types"
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -27,22 +30,81 @@ export default function DashboardPage() {
   const [team, setTeam] = useState<Team | null>(null)
   const [role, setRole] = useState<"leader" | "member" | "none">("none")
   const [loading, setLoading] = useState(true)
+  const [requests, setRequests] = useState<JoinRequest[]>([])
+  const [requestsLoading, setRequestsLoading] = useState(false)
 
   useEffect(() => {
-    // Check if user is logged in
-    const storedStudent = localStorage.getItem("student")
-    const storedTeam = localStorage.getItem("team")
-    const storedRole = localStorage.getItem("role")
+    const loadDashboardData = async () => {
+      // Check if user is logged in
+      const storedStudent = localStorage.getItem("student")
+      const storedRole = localStorage.getItem("role")
 
-    if (!storedStudent) {
-      router.push("/login")
-      return
+      if (!storedStudent) {
+        router.push("/login")
+        return
+      }
+
+      const parsedStudent = JSON.parse(storedStudent)
+      const parsedRole = (storedRole as any) || "none"
+
+      setStudent(parsedStudent)
+      setRole(parsedRole)
+
+      console.log("Dashboard: User role:", parsedRole)
+      console.log("Dashboard: Student regNo:", parsedStudent.regNo)
+
+      let currentTeam = null
+
+      // Always fetch fresh team data from API with cache busting
+      try {
+        const timestamp = Date.now()
+        const teamResponse = await fetch(`/api/teams?regNo=${parsedStudent.regNo}&t=${timestamp}`, {
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        })
+        if (teamResponse.ok) {
+          const teamResult = await teamResponse.json()
+          if (teamResult.ok && teamResult.team) {
+            // Update localStorage with fresh data
+            localStorage.setItem("team", JSON.stringify(teamResult.team))
+            currentTeam = teamResult.team
+            setTeam(teamResult.team)
+            console.log("Dashboard: Team loaded successfully:", teamResult.team.teamName)
+          } else {
+            // No team found
+            localStorage.removeItem("team")
+            setTeam(null)
+          }
+        } else {
+          // Fallback to localStorage if API fails
+          const storedTeam = localStorage.getItem("team")
+          const parsedTeam = storedTeam && storedTeam !== "undefined" ? JSON.parse(storedTeam) : null
+          currentTeam = parsedTeam
+          setTeam(parsedTeam)
+        }
+      } catch (error) {
+        console.error("Error fetching team data:", error)
+        // Fallback to localStorage
+        const storedTeam = localStorage.getItem("team")
+        const parsedTeam = storedTeam && storedTeam !== "undefined" ? JSON.parse(storedTeam) : null
+        currentTeam = parsedTeam
+        setTeam(parsedTeam)
+      }
+
+      setLoading(false)
+
+      // Load requests if user is a team leader
+      if (parsedRole === "leader" && currentTeam) {
+        console.log("Dashboard: Loading requests for team:", currentTeam.teamId)
+        loadRequests(currentTeam.teamId)
+      } else {
+        console.log("Dashboard: Not loading requests - role:", parsedRole, "team:", !!currentTeam)
+      }
     }
 
-    setStudent(JSON.parse(storedStudent))
-    setTeam(storedTeam && storedTeam !== "undefined" ? JSON.parse(storedTeam) : null)
-    setRole((storedRole as any) || "none")
-    setLoading(false)
+    loadDashboardData()
   }, [router])
 
   const handleLogout = () => {
@@ -56,9 +118,91 @@ export default function DashboardPage() {
     router.push("/create-team")
   }
 
+  const handleJoinTeam = () => {
+    router.push("/join-team")
+  }
+
   const handleEditTeam = () => {
     if (team) {
       router.push(`/edit-team/${team.teamId}`)
+    }
+  }
+
+  const loadRequests = async (teamId: string) => {
+    console.log("Dashboard: loadRequests called with teamId:", teamId)
+    setRequestsLoading(true)
+    try {
+      const response = await fetch(`/api/teams/${teamId}/requests`, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      })
+      console.log("Dashboard: loadRequests response status:", response.status)
+      if (response.ok) {
+        const result = await response.json()
+        console.log("Dashboard: loadRequests result:", result)
+        if (result.ok) {
+          setRequests(result.requests || [])
+          console.log("Dashboard: Set requests:", result.requests?.length || 0, "requests")
+        }
+      } else {
+        console.error("Dashboard: loadRequests failed with status:", response.status)
+      }
+    } catch (error) {
+      console.error("Error loading requests:", error)
+    } finally {
+      setRequestsLoading(false)
+    }
+  }
+
+  const handleAcceptRequest = async (requestId: string) => {
+    try {
+      console.log("Accepting request:", requestId)
+      const response = await fetch(`/api/requests/${requestId}/accept`, {
+        method: "PUT",
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      })
+
+      console.log("Accept response status:", response.status)
+
+      if (response.ok) {
+        console.log("Request accepted successfully, reloading page...")
+        // Force a full page reload to get fresh data
+        window.location.reload()
+      } else {
+        console.error("Failed to accept request:", response.status)
+      }
+    } catch (error) {
+      console.error("Error accepting request:", error)
+    }
+  }
+
+  const handleRejectRequest = async (requestId: string) => {
+    try {
+      console.log("Rejecting request:", requestId)
+      const response = await fetch(`/api/requests/${requestId}/reject`, {
+        method: "PUT",
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      })
+
+      console.log("Reject response status:", response.status)
+
+      if (response.ok) {
+        console.log("Request rejected successfully, reloading page...")
+        // Force a full page reload to get fresh data
+        window.location.reload()
+      } else {
+        console.error("Failed to reject request:", response.status)
+      }
+    } catch (error) {
+      console.error("Error rejecting request:", error)
     }
   }
 
@@ -269,15 +413,113 @@ export default function DashboardPage() {
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  You can create a new team or wait to be added to an existing team by a team leader.
+                  You can create a new team or request to join an existing team.
                 </AlertDescription>
               </Alert>
-              <div className="mt-4">
+              <div className="mt-4 flex space-x-4">
                 <Button onClick={handleCreateTeam}>
                   <Plus className="mr-2 h-4 w-4" />
                   Create New Team
                 </Button>
+                <Button variant="outline" onClick={handleJoinTeam}>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Request to Join Team
+                </Button>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Requests Section - Only for Team Leaders */}
+        {role === "leader" && team && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Bell className="mr-2 h-5 w-5" />
+                Join Requests
+                {requests.length > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {requests.length}
+                  </Badge>
+                )}
+              </CardTitle>
+              <CardDescription>
+                Students requesting to join your team
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {requestsLoading ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                  <p className="text-gray-600">Loading requests...</p>
+                </div>
+              ) : requests.length === 0 ? (
+                <div className="text-center py-8">
+                  <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600">No pending join requests</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {requests.map((request) => (
+                    <div key={request.id} className="border rounded-lg p-4 bg-gray-50">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <h4 className="font-medium text-gray-900">{request.studentName}</h4>
+                            <Badge variant="outline">{request.studentRegNo}</Badge>
+                          </div>
+
+                          <div className="mb-3">
+                            <p className="text-sm font-medium text-gray-700 mb-1">Skills & Experience:</p>
+                            <p className="text-sm text-gray-600 bg-white p-2 rounded border">
+                              {request.note}
+                            </p>
+                          </div>
+
+                          {request.githubPortfolioLink && (
+                            <div className="mb-3">
+                              <p className="text-sm font-medium text-gray-700 mb-1">Portfolio:</p>
+                              <a
+                                href={request.githubPortfolioLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-blue-600 hover:text-blue-800 underline flex items-center"
+                              >
+                                <ExternalLink className="h-3 w-3 mr-1" />
+                                View Portfolio
+                              </a>
+                            </div>
+                          )}
+
+                          <p className="text-xs text-gray-500">
+                            Requested on {new Date(request.timestamp).toLocaleDateString()}
+                          </p>
+                        </div>
+
+                        <div className="flex space-x-2 ml-4">
+                          <Button
+                            size="sm"
+                            onClick={() => handleAcceptRequest(request.id)}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Accept
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleRejectRequest(request.id)}
+                            className="text-red-600 border-red-300 hover:bg-red-50"
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Reject
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

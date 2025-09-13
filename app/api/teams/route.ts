@@ -1,8 +1,44 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createTeam } from "@/lib/sheets"
+import { createTeam, getTeamByMemberRegNo } from "@/lib/sheets"
 import { CreateTeamSchema } from "@/lib/validation"
 import { validateTeamRequest } from "@/lib/validation-utils"
 import type { CreateTeamRequest, CreateTeamResponse } from "@/lib/types"
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const regNo = searchParams.get("regNo")
+
+    if (!regNo) {
+      return NextResponse.json({
+        ok: false,
+        message: "Registration number is required"
+      }, { status: 400 })
+    }
+
+    const team = await getTeamByMemberRegNo(regNo)
+
+    if (!team) {
+      return NextResponse.json({
+        ok: false,
+        message: "Team not found"
+      }, { status: 404 })
+    }
+
+    return NextResponse.json({
+      ok: true,
+      message: "Team retrieved successfully",
+      team: team
+    })
+
+  } catch (error) {
+    console.error("Error getting team:", error)
+    return NextResponse.json({
+      ok: false,
+      message: "Internal server error"
+    }, { status: 500 })
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
