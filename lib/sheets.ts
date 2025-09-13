@@ -412,17 +412,26 @@ export async function updateTeam(teamId: string, teamData: {
   try {
     const doc = await getSpreadsheet()
     const teamsSheet = doc.sheetsByTitle["Teams"]
+    const studentsSheet = doc.sheetsByTitle["Form Responses 1"]
 
-    if (!teamsSheet) {
-      console.error("Teams sheet not found")
+    if (!teamsSheet || !studentsSheet) {
+      console.error("Required sheets not found")
       return null
     }
 
     const rows = await teamsSheet.getRows()
+    const studentRows = await studentsSheet.getRows()
 
     // Find the team row by Team ID
     for (const row of rows) {
       if (row.get("Team ID") === teamId) {
+        // Get current member regNos before updating
+        const currentMemberRegNos: string[] = []
+        for (let i = 1; i <= 5; i++) {
+          const regNo = row.get(`Member-${i} Reg NO`)
+          if (regNo) currentMemberRegNos.push(regNo)
+        }
+
         // Update team basic info
         row.set("Team Name", teamData.teamName)
         row.set("Problem Statement ID 1", teamData.problemStatementId1)
@@ -434,16 +443,67 @@ export async function updateTeam(teamId: string, teamData: {
         row.set("Team Leader project", teamData.leader.projectLink || "")
 
         // Update members info (up to 5 members)
+        const newMemberRegNos: string[] = []
         for (let i = 0; i < 5; i++) {
           const member = teamData.members[i]
           const memberIndex = i + 1
 
-          if (member) {
+          if (member && member.regNo) {
+            // Member exists - update their info
+            row.set(`Member-${memberIndex} Reg NO`, member.regNo)
+            row.set(`Member-${memberIndex} Name`, "") // Will be set when student data is fetched
             row.set(`Member-${memberIndex} github`, member.github || "")
             row.set(`Member-${memberIndex} project`, member.projectLink || "")
+            newMemberRegNos.push(member.regNo)
+          } else {
+            // Member removed - clear their data
+            row.set(`Member-${memberIndex} Reg NO`, "")
+            row.set(`Member-${memberIndex} Name`, "")
+            row.set(`Member-${memberIndex} github`, "")
+            row.set(`Member-${memberIndex} project`, "")
           }
         }
 
+        await row.save()
+
+        // Handle student status updates
+        // Find members who were removed
+        const removedMembers = currentMemberRegNos.filter(regNo => !newMemberRegNos.includes(regNo))
+        // Find members who were added
+        const addedMembers = newMemberRegNos.filter(regNo => !currentMemberRegNos.includes(regNo))
+
+        // Update removed members' status
+        for (const regNo of removedMembers) {
+          const studentRow = studentRows.find(r => r.get("University Register Number") === regNo)
+          if (studentRow) {
+            studentRow.set("is Assigned to a team?", "")
+            studentRow.set("AssignedTeamID", "")
+            await studentRow.save()
+            console.log(`Updated student ${regNo}: removed from team`)
+          }
+        }
+
+        // Update added members' status
+        for (const regNo of addedMembers) {
+          const studentRow = studentRows.find(r => r.get("University Register Number") === regNo)
+          if (studentRow) {
+            studentRow.set("is Assigned to a team?", "Yes")
+            studentRow.set("AssignedTeamID", teamId)
+            await studentRow.save()
+            console.log(`Updated student ${regNo}: added to team ${teamId}`)
+          }
+        }
+
+        // Update member names in teams sheet
+        for (let i = 0; i < teamData.members.length; i++) {
+          const member = teamData.members[i]
+          if (member && member.regNo) {
+            const studentRow = studentRows.find(r => r.get("University Register Number") === member.regNo)
+            if (studentRow) {
+              row.set(`Member-${i + 1} Name`, studentRow.get("Full Name") || "")
+            }
+          }
+        }
         await row.save()
 
         // Return updated team data
@@ -457,9 +517,9 @@ export async function updateTeam(teamId: string, teamData: {
             github: row.get("Team Leader github"),
             projectLink: row.get("Team Leader project")
           },
-          members: teamData.members.map((member, index) => ({
+          members: teamData.members.filter(m => m.regNo).map((member, index) => ({
             regNo: member.regNo,
-            name: row.get(`Member-${index + 1} Name`),
+            name: row.get(`Member-${index + 1} Name`) || "",
             github: member.github,
             projectLink: member.projectLink
           }))

@@ -22,6 +22,7 @@ export default function EditTeamPage() {
   const teamId = params.teamId as string
 
   const [loading, setLoading] = useState(true)
+  const [loadingMessage, setLoadingMessage] = useState("Loading team data...")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
@@ -66,26 +67,46 @@ export default function EditTeamPage() {
 
     setStudent(parsedStudent)
 
-    // Fetch fresh team data from Google Sheets instead of using localStorage
-    const loadFreshTeamData = async () => {
+    // Fetch fresh team data from Google Sheets using teamId with retry logic
+    const loadFreshTeamData = async (retryCount = 0) => {
       try {
-        const response = await fetch(`/api/teams?regNo=${parsedStudent.regNo}`)
+        console.log(`Loading team data for teamId: ${teamId} (attempt ${retryCount + 1})`)
+        setLoadingMessage(`Loading team data... (attempt ${retryCount + 1})`)
+
+        const response = await fetch(`/api/teams/${teamId}/get`, {
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        })
+
         if (!response.ok) {
-          throw new Error("Failed to fetch team data")
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
         }
 
         const result = await response.json()
         if (!result.ok) {
-          throw new Error(result.message)
+          throw new Error(result.message || "API returned error")
+        }
+
+        if (!result.team) {
+          throw new Error("No team data received")
         }
 
         const freshTeamData = result.team
-        console.log("Fresh team data from Google Sheets:", freshTeamData)
+        console.log("Successfully loaded team data:", freshTeamData.teamName)
+        setLoadingMessage("Loading students...")
 
         setTeam(freshTeamData)
 
         // Load students first, then populate form data
-        await loadStudents(freshTeamData)
+        try {
+          await loadStudents(freshTeamData)
+          setLoadingMessage("Preparing form...")
+        } catch (studentsError) {
+          console.error("Error loading students:", studentsError)
+          // Continue with team data even if students fail to load
+        }
 
         // Populate form with fresh team data from Google Sheets
         setTeamName(freshTeamData.teamName)
@@ -122,8 +143,19 @@ export default function EditTeamPage() {
 
         setLoading(false)
       } catch (error) {
-        console.error("Error loading fresh team data:", error)
-        setError("Failed to load team data from server")
+        console.error(`Error loading team data (attempt ${retryCount + 1}):`, error)
+
+        // Retry up to 2 times with delay
+        if (retryCount < 2) {
+          console.log(`Retrying in 2 seconds... (${retryCount + 1}/2)`)
+          setTimeout(() => {
+            loadFreshTeamData(retryCount + 1)
+          }, 2000)
+          return
+        }
+
+        // If all retries failed, show error
+        setError(`Failed to load team data from server: ${error instanceof Error ? error.message : 'Unknown error'}`)
         setLoading(false)
       }
     }
@@ -134,8 +166,13 @@ export default function EditTeamPage() {
   const loadStudents = async (teamData?: Team) => {
     try {
       setLoading(true)
-      const response = await fetch(`/api/students`)
-      if (!response.ok) throw new Error("Failed to load students")
+      const response = await fetch(`/api/students`, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      })
+      if (!response.ok) throw new Error(`Failed to load students: ${response.status}`)
 
       const data = await response.json()
 
@@ -291,7 +328,7 @@ export default function EditTeamPage() {
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading team data...</p>
+            <p className="text-gray-600">{loadingMessage}</p>
           </div>
         </div>
         <Footer />
