@@ -250,8 +250,8 @@ export default function EditTeamPage() {
         return
       }
 
-      // Check mandatory members
-      for (let i = 0; i < 3; i++) {
+      // Check mandatory members (first 2 members)
+      for (let i = 0; i < 2; i++) {
         if (!members[i].regNo) {
           setError(`Member ${i + 1} is required`)
           setSaving(false)
@@ -545,21 +545,21 @@ export default function EditTeamPage() {
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-medium text-gray-900">Team Members</h3>
                   <div className="text-sm text-gray-600">
-                    Members 1-3 are <span className="font-medium text-red-600">mandatory</span>, 
-                    Members 4-5 are <span className="font-medium text-blue-600">optional</span>
+                    Members 1-2 are <span className="font-medium text-red-600">mandatory</span>,
+                    Members 3-5 are <span className="font-medium text-blue-600">optional</span>
                   </div>
                 </div>
 
                 {members.map((member, index) => (
                   <div key={index}>
                     <MemberRow
-                      label={`Member ${index + 1}${index >= 3 ? ' (Optional)' : ''}`}
+                      label={`Member ${index + 1}${index >= 2 ? ' (Optional)' : ''}`}
                       students={students}
                       memberData={member}
                       onMemberChange={(data) => updateMember(index, data)}
                       excludeRegNos={getExcludedRegNos().filter(regNo => regNo !== member.regNo)}
-                      isRequired={index < 3}
-                      isOptional={index >= 3}
+                      isRequired={index < 2}
+                      isOptional={index >= 2}
                       currentTeamRegNos={getCurrentTeamRegNos()}
                     />
                   </div>

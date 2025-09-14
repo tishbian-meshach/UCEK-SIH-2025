@@ -38,7 +38,7 @@ export default function CreateTeamPage() {
   const [members, setMembers] = useState<MemberData[]>([
     { regNo: "", github: "", projectLink: "" }, // Member 1 - mandatory
     { regNo: "", github: "", projectLink: "" }, // Member 2 - mandatory
-    { regNo: "", github: "", projectLink: "" }, // Member 3 - mandatory
+    { regNo: "", github: "", projectLink: "" }, // Member 3 - optional
     { regNo: "", github: "", projectLink: "" }, // Member 4 - optional
     { regNo: "", github: "", projectLink: "" }  // Member 5 - optional
   ])
@@ -113,18 +113,18 @@ export default function CreateTeamPage() {
       return false
     }
 
-    // Validate mandatory members (first 3 members)
-    for (let i = 0; i < 3; i++) {
+    // Validate mandatory members (first 2 members)
+    for (let i = 0; i < 2; i++) {
       if (!members[i].regNo) {
         setError(`Member ${i + 1} is required`)
         return false
       }
     }
 
-    // Check minimum team size (leader + 3 mandatory members = 4 minimum)
+    // Check minimum team size (leader + 2 mandatory members = 3 minimum)
     const totalMembers = 1 + members.filter(m => m.regNo).length
-    if (totalMembers < 4) {
-      setError("Team must have at least 4 members (1 leader + 3 members)")
+    if (totalMembers < 3) {
+      setError("Team must have at least 3 members (1 leader + 2 members)")
       return false
     }
 
@@ -432,21 +432,21 @@ export default function CreateTeamPage() {
                       <div className="flex items-center justify-between">
                         <h3 className="text-lg font-medium text-gray-900">Team Members</h3>
                         <div className="text-sm text-gray-600">
-                          Members 1-3 are <span className="font-medium text-red-600">mandatory</span>,
-                          Members 4-5 are <span className="font-medium text-blue-600">optional</span>
+                          Members 1-2 are <span className="font-medium text-red-600">mandatory</span>,
+                          Members 3-5 are <span className="font-medium text-blue-600">optional</span>
                         </div>
                       </div>
 
                       {members.map((member, index) => (
                         <div key={index} className="relative">
                           <MemberRow
-                            label={`Member ${index + 1}${index >= 3 ? ' (Optional)' : ''}`}
+                            label={`Member ${index + 1}`}
                             students={students}
                             memberData={member}
                             onMemberChange={(data) => updateMember(index, data)}
                             excludeRegNos={getExcludedRegNos().filter(regNo => regNo !== member.regNo)}
-                            isRequired={index < 3}
-                            isOptional={index >= 3}
+                            isRequired={index < 2}
+                            isOptional={index >= 2}
                           />
                         </div>
                       ))}
