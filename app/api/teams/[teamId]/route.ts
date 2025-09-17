@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { updateTeam } from "@/lib/sheets"
+import { updateTeam, getTeamById } from "@/lib/sheets"
 
 interface UpdateTeamRequest {
   teamName: string
@@ -22,6 +22,50 @@ interface UpdateTeamResponse {
   ok: boolean
   message: string
   team?: any
+}
+
+interface GetTeamResponse {
+  ok: boolean
+  message: string
+  team?: any
+}
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { teamId: string } }
+) {
+  try {
+    const teamId = params.teamId
+
+    if (!teamId) {
+      return NextResponse.json<GetTeamResponse>({
+        ok: false,
+        message: "Team ID is required"
+      }, { status: 400 })
+    }
+
+    const team = await getTeamById(teamId)
+
+    if (!team) {
+      return NextResponse.json<GetTeamResponse>({
+        ok: false,
+        message: "Team not found"
+      }, { status: 404 })
+    }
+
+    return NextResponse.json<GetTeamResponse>({
+      ok: true,
+      message: "Team retrieved successfully",
+      team
+    })
+
+  } catch (error) {
+    console.error("Error retrieving team:", error)
+    return NextResponse.json<GetTeamResponse>({
+      ok: false,
+      message: "Internal server error"
+    }, { status: 500 })
+  }
 }
 
 export async function PUT(

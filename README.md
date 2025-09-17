@@ -4,12 +4,21 @@ A Next.js application for creating and managing teams with Google Sheets as the 
 
 ## Features
 
-- **Team Creation**: Step-by-step wizard for creating teams
+- **Team Creation**: Step-by-step wizard for creating teams with flexible member options (1 leader + 2-5 members)
+- **Request to Join Team**: Students can send requests to join existing teams.
+- **Manage Join Requests**: Team leaders can accept or reject join requests from their dashboard.
+- **Team Editing**: Team leaders can edit team details and manage members (add/remove) after creation.
+- **PDF Submission**: Submit Google Drive PDF links with automatic sharing validation
 - **Google Sheets Integration**: Uses Google Sheets as database with service account authentication
 - **Real-time Validation**: Prevents conflicts when multiple leaders try to select the same student
 - **Filtering**: Filter students by department and year
 - **Responsive Design**: Works on desktop and mobile devices
 - **Concurrency Handling**: Prevents race conditions with proper conflict detection
+- **Retry Logic**: Automatic retry mechanism for failed API calls (up to 3 attempts)
+- **Cache Busting**: Fresh data fetching to ensure real-time updates
+- **Quota Management**: Intelligent caching and rate limiting to handle Google API quotas
+- **Automatic Request ID Assignment**: System-generated unique identifiers for join requests
+- **Real-time Status Updates**: Instant UI updates after team modifications
 
 ## Tech Stack
 
@@ -55,12 +64,14 @@ npm install
 ### 3. Setup Google Sheets
 
 1. Create a new Google Sheet
-2. Create two sheets (tabs) named exactly:
-   - `Students`
-   - `Teams`
+2. Create three sheets (tabs) named exactly:
+    - `Students`
+    - `Teams`
+    - `Requests`
 3. Import sample data:
-   - Copy content from `sample_students.csv` to Students sheet
-   - Copy content from `sample_teams.csv` to Teams sheet (optional)
+    - Copy content from `sample_students.csv` to Students sheet
+    - Copy content from `sample_teams.csv` to Teams sheet (optional)
+    - The Requests sheet will be populated automatically as students submit join requests
 4. Share the sheet with your service account email:
    - Click "Share" button
    - Add the service account email (found in your JSON key file)
@@ -97,19 +108,53 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 
 ### Creating a Team
 
-1. **Team Details**: Enter your team name
-2. **Filter Students**: Optionally filter by department and year
-3. **Select Leader**: Choose the team leader (required)
-4. **Add Members**: Select 2-5 additional team members
-5. **Review & Submit**: Review your team and submit
+1. **Team Details**: Enter your team name and problem statement IDs.
+2. **Department Needs**: Optionally specify if your team needs members from other departments.
+3. **Select Leader**: Choose the team leader (required).
+4. **Add Members**: Select at least 2 additional team members (total 3 members including leader). You can add up to 5 additional members (total 6 members).
+5. **Review & Submit**: Review your team and submit.
+
+### Request to Join Team (For Students)
+
+1. **Browse Teams**: From the dashboard, click "Request to Join Team" to see available teams.
+2. **Select Team**: Click on a team you wish to join.
+3. **Submit Request**: Fill in your skills, experience, and optionally your GitHub/portfolio link, then submit the request.
+4. **Track Status**: Your request status will be visible on the dashboard.
+
+### Manage Join Requests (For Team Leaders)
+
+1. **View Requests**: On your dashboard, navigate to the "Join Requests" section.
+2. **Review Details**: Each request displays student information, skills, and portfolio links.
+3. **Accept or Reject**: Click the "Accept" button to add the student to your team, or "Reject" to decline the request.
+4. **Instant Updates**: Your team list and pending requests will update automatically.
+
+### Editing a Team (For Team Leaders)
+
+1. **Access Edit Page**: From your dashboard, click "Edit Team".
+2. **Update Details**: Modify team name, problem statements, or department needs.
+3. **Manage Members**: Add or remove team members.
+4. **Save Changes**: Click "Save Changes" to update your team in Google Sheets.
+
+### Submitting PDF Links (For All Team Members)
+
+1. **Access Submit PDF**: From your dashboard, click "Submit PDF".
+2. **Convert & Upload**: Convert your PPT to PDF before uploading to Google Drive.
+3. **Enable Sharing**: Right-click your PDF file in Google Drive → "Get shareable link" → Set to "Anyone with the link can view".
+4. **Copy Full Link**: Copy the complete link including the `?usp=sharing` parameter at the end.
+5. **Enter PDF Links**: Submit Google Drive links to your PDF presentations.
+6. **Conditional Fields**: If your team has both Problem Statement IDs, you'll see two PDF link fields; if only one, you'll see one field.
+7. **Validation**: Links must be from drive.google.com only, include `?usp=sharing`, and be publicly accessible.
+8. **Design Tools**: Check out the recommended design and flowchart tools at the bottom of the submission page.
+7. **View Submissions**: Submitted PDF links are displayed on your dashboard with direct links to view them.
 
 ### Team Size Configuration
 
 You can modify team size constraints in `lib/config.ts`:
 
 \`\`\`typescript
-export const MIN_MEMBERS = 3 // Leader + 2 members minimum
-export const MAX_MEMBERS = 6 // Leader + 5 members maximum
+export const MIN_MEMBERS = 3 // Total minimum members (leader + 2)
+export const MAX_MEMBERS = 6 // Total maximum members (leader + 5)
+export const MANDATORY_MEMBERS = 2 // First 2 members after leader are mandatory
 export const OPTIONAL_SLOTS = 2 // Last 2 slots are optional
 \`\`\`
 
@@ -126,6 +171,16 @@ export const OPTIONAL_SLOTS = 2 // Last 2 slots are optional
 
 - `POST /api/teams` - Create a new team
 - `GET /api/teams/[teamId]` - Get team details
+- `GET /api/teams/available` - Get teams available for joining
+- `GET /api/teams/[teamId]/requests` - Get join requests for a team
+- `PUT /api/teams/[teamId]/ppt` - Update PDF links for a team
+
+### Join Requests
+
+- `POST /api/requests` - Submit a join request to a team
+- `GET /api/requests/[requestId]/accept` - Accept a join request (adds student to team)
+- `GET /api/requests/[requestId]/reject` - Reject a join request
+- `GET /api/students/[regNo]/requests` - Get join requests for a student
 
 ### Example API Usage
 
@@ -191,6 +246,27 @@ The Teams sheet stores one row per team with columns for each member:
 - `Leader_Name`, `Leader_RegNo`, `Leader_Email`, `Leader_Dept`, `Leader_Year`, `Leader_Github`, `Leader_ProjectLink`
 - `Member2_Name`, `Member2_RegNo`, `Member2_Email`, `Member2_Dept`, `Member2_Year`, `Member2_Github`, `Member2_ProjectLink`
 - ... (up to Member6)
+- `PPT Link 1` - Google Drive link to PDF for Problem Statement 1
+- `PPT Link 2` - Google Drive link to PDF for Problem Statement 2
+
+### Requests Sheet Columns
+
+The Requests sheet stores join requests with the following columns:
+
+| Column | Description | Example |
+|--------|-------------|---------|
+| RequestID | Unique request identifier | req-123 |
+| StudentRegNo | Student's registration number | REG001 |
+| StudentName | Student's full name | John Doe |
+| StudentEmail | Student's email | john@uni.edu |
+| StudentDept | Student's department | CS |
+| StudentYear | Student's year | 3 |
+| TeamID | Target team ID | team-456 |
+| Skills | Student's skills | JavaScript, React |
+| Experience | Student's experience | 2 years web dev |
+| PortfolioLink | GitHub/portfolio URL | https://github.com/john |
+| Status | Request status | Pending/Accepted/Rejected |
+| CreatedAt | Request timestamp | 2024-01-01T00:00:00Z |
 
 ## Testing
 
@@ -235,8 +311,14 @@ The Teams sheet stores one row per team with columns for each member:
    - Ensure Google Sheets API is enabled in your Google Cloud project
 
 4. **Students not showing as available**
-   - Check the "Status" column in your Students sheet
-   - Ensure values are exactly "Available" or "Assigned" (case-sensitive)
+    - Check the "Status" column in your Students sheet
+    - Ensure values are exactly "Available" or "Assigned" (case-sensitive)
+
+5. **Google Sheets API quota exceeded**
+    - This happens when too many requests are made to Google Sheets in a short time
+    - The app automatically retries with exponential backoff (up to 3 attempts)
+    - If quota is exceeded, wait a few minutes before trying again
+    - The app uses intelligent caching to reduce API calls and prevent quota issues
 
 ### Debug Mode
 

@@ -29,6 +29,8 @@ export interface Team {
   problemStatementId1?: string
   problemStatementId2?: string
   deptNeeded?: string
+  pptLink1?: string
+  pptLink2?: string
   leader: TeamMember
   members: TeamMember[]
   createdAt: string

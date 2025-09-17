@@ -19,7 +19,8 @@ import {
   CheckCircle,
   UserPlus,
   Bell,
-  X
+  X,
+  FileText
 } from "lucide-react"
 import Footer from "@/components/Footer"
 import type { Student, Team, JoinRequest } from "@/lib/types"
@@ -125,6 +126,12 @@ export default function DashboardPage() {
   const handleEditTeam = () => {
     if (team) {
       router.push(`/edit-team/${team.teamId}`)
+    }
+  }
+
+  const handleSubmitPPT = () => {
+    if (team) {
+      router.push(`/submit-ppt?teamId=${team.teamId}`)
     }
   }
 
@@ -291,12 +298,21 @@ export default function DashboardPage() {
                     Problem Statement ID: {team.problemStatementId}
                   </CardDescription>
                 </div>
-                {role === "leader" && (
-                  <Button onClick={handleEditTeam}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Edit Team
+                <div className="flex space-x-2">
+                  {role === "leader" && (
+                    <Button onClick={handleEditTeam}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit Team
+                    </Button>
+                  )}
+                  <Button
+                    onClick={handleSubmitPPT}
+                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold px-6 py-2 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    Submit PDF
                   </Button>
-                )}
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -395,6 +411,43 @@ export default function DashboardPage() {
                     </div>
                   )}
                 </div>
+
+                {/* PDF Links Section */}
+                {(team.pptLink1 || team.pptLink2) && (
+                  <div>
+                    <h3 className="text-lg font-medium mb-3">PDF Submissions</h3>
+                    <div className="space-y-3">
+                      {team.pptLink1 && (
+                        <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                          <div>
+                            <p className="font-medium text-blue-900">Problem Statement 1</p>
+                            <p className="text-sm text-blue-700">{team.problemStatementId1}</p>
+                          </div>
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={team.pptLink1} target="_blank" rel="noopener noreferrer">
+                              <FileText className="h-4 w-4 mr-1" />
+                              View PDF
+                            </a>
+                          </Button>
+                        </div>
+                      )}
+                      {team.pptLink2 && (
+                        <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                          <div>
+                            <p className="font-medium text-green-900">Problem Statement 2</p>
+                            <p className="text-sm text-green-700">{team.problemStatementId2}</p>
+                          </div>
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={team.pptLink2} target="_blank" rel="noopener noreferrer">
+                              <FileText className="h-4 w-4 mr-1" />
+                              View PDF
+                            </a>
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

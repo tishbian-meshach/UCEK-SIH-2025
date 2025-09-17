@@ -5,6 +5,22 @@ import { v4 as uuidv4 } from "uuid"
 
 let doc: GoogleSpreadsheet | null = null
 
+// Simple in-memory cache for team data
+const teamCache = new Map<string, { data: Team; timestamp: number }>()
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+
+const getCachedTeam = (teamId: string): Team | null => {
+  const cached = teamCache.get(teamId)
+  if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
+    return cached.data
+  }
+  return null
+}
+
+const setCachedTeam = (teamId: string, team: Team): void => {
+  teamCache.set(teamId, { data: team, timestamp: Date.now() })
+}
+
 async function getSpreadsheet(): Promise<GoogleSpreadsheet> {
   try {
     // Always create a fresh connection to avoid any caching issues
@@ -299,6 +315,8 @@ export async function getTeamByMemberRegNo(regNo: string): Promise<Team | null> 
       problemStatementId1: teamRow.get("Problem Statement ID 1") || teamRow.get("Problem Statement ID") || "",
       problemStatementId2: teamRow.get("Problem Statement ID 2") || "",
       deptNeeded: teamRow.get("Dept Needed") || "",
+      pptLink1: teamRow.get("PPT Link 1") || "",
+      pptLink2: teamRow.get("PPT Link 2") || "",
       leader: {
         ...leaderStudent,
         github: teamRow.get("Team Leader github") || "",
@@ -334,6 +352,12 @@ export async function getTeamByMemberRegNo(regNo: string): Promise<Team | null> 
 
 export async function getTeamById(teamId: string): Promise<Team | null> {
   try {
+    // Check cache first
+    const cachedTeam = getCachedTeam(teamId)
+    if (cachedTeam) {
+      return cachedTeam
+    }
+
     const doc = await getSpreadsheet()
     const teamsSheet = doc.sheetsByTitle["Teams"]
 
@@ -360,6 +384,8 @@ export async function getTeamById(teamId: string): Promise<Team | null> {
       problemStatementId1: teamRow.get("Problem Statement ID 1") || teamRow.get("Problem Statement ID") || "",
       problemStatementId2: teamRow.get("Problem Statement ID 2") || "",
       deptNeeded: teamRow.get("Dept Needed") || "",
+      pptLink1: teamRow.get("PPT Link 1") || "",
+      pptLink2: teamRow.get("PPT Link 2") || "",
       leader: {
         ...leaderStudent,
         github: teamRow.get("Team Leader github") || "",
@@ -385,6 +411,9 @@ export async function getTeamById(teamId: string): Promise<Team | null> {
         }
       }
     }
+
+    // Cache the team data
+    setCachedTeam(teamId, team)
 
     return team
   } catch (error) {
@@ -947,5 +976,38 @@ export async function getStudentRequestsStatus(studentRegNo: string): Promise<{[
   } catch (error) {
     console.error("Error getting student requests status:", error)
     return {}
+  }
+}
+
+export async function updateTeamPPTLinks(teamId: string, pptLink1: string, pptLink2: string): Promise<boolean> {
+  try {
+    const doc = await getSpreadsheet()
+    const teamsSheet = doc.sheetsByTitle["Teams"]
+
+    if (!teamsSheet) {
+      throw new Error("Teams sheet not found")
+    }
+
+    const rows = await teamsSheet.getRows()
+
+    // Find the team row by Team ID
+    for (const row of rows) {
+      if (row.get("Team ID") === teamId) {
+        // Update PPT links
+        row.set("PPT Link 1", pptLink1 || "")
+        row.set("PPT Link 2", pptLink2 || "")
+        await row.save()
+
+        // Clear cache to ensure fresh data on next read
+        teamCache.delete(teamId)
+
+        return true
+      }
+    }
+
+    return false // Team not found
+  } catch (error) {
+    console.error("Error updating team PPT links:", error)
+    return false
   }
 }
