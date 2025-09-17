@@ -402,6 +402,23 @@ export default function SubmitPPTPage() {
                       <div className="p-3 bg-gray-50 rounded-lg">
                         <div className="flex items-center justify-between">
                           <div>
+                            <p className="font-medium text-gray-900">Canva</p>
+                            <p className="text-sm text-gray-600">Easy drag-and-drop tool for presentations, posters, and pitch decks.</p>
+                          </div>
+                          <a
+                            href="https://www.canva.com"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                          >
+                            Visit →
+                          </a>
+                        </div>
+                      </div>
+                    
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
                             <p className="font-medium text-gray-900">Gamma.app</p>
                             <p className="text-sm text-gray-600">AI-powered tool to create modern, interactive pitch decks</p>
                           </div>
